@@ -22,13 +22,14 @@ def get_ai_response():
 
     conversation_memory[player_id].append({"role": "user", "content": user_msg})
 
+    # Limit memory slice size to avoid hitting API limits
     memory_slice = [conversation_memory[player_id][0]] + conversation_memory[player_id][-19:]
 
     payload = {
-    "model": "minimax/minimax-m1",
-    "messages": memory_slice,
-    "max_tokens": 200,
-}
+        "model": "minimax/minimax-m1",
+        "messages": memory_slice,
+        "max_tokens": 200,
+    }
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
