@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") or "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"
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") or "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"
 
 conversation_memory = {}
 
@@ -17,16 +17,14 @@ def get_ai_response():
 
     system_prompt = persona if persona else "You are a friendly Roblox NPC. Keep replies short and casual, no more than 30 words."
 
+    # Reset conversation if system prompt changed or new user
     if player_id not in conversation_memory or conversation_memory[player_id][0]["content"] != system_prompt:
         conversation_memory[player_id] = [{"role": "system", "content": system_prompt}]
 
     conversation_memory[player_id].append({"role": "user", "content": user_msg})
 
-    # Keep last 1 system + 10 user+assistant messages (max 21 total entries)
-    history = conversation_memory[player_id][1:]
-    # Filter only last 10 user/assistant messages pairs (20 messages), or fewer if less exist
-    last_20 = history[-20:]
-    memory_slice = [conversation_memory[player_id][0]] + last_20
+    # Keep last 20 messages + system prompt
+    memory_slice = [conversation_memory[player_id][0]] + conversation_memory[player_id][-19:]
 
     payload = {
         "model": "minimax/minimax-m1",
@@ -42,12 +40,13 @@ def get_ai_response():
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         response.raise_for_status()
-        result = response.json()
-        reply = result["choices"][0]["message"]["content"].strip()
+        reply = response.json()["choices"][0]["message"]["content"].strip()
         conversation_memory[player_id].append({"role": "assistant", "content": reply})
-        print(f"[INFO] Replied to {player_id} with: {reply}")
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err} - Response content: {response.text}")
+        reply = "Sorry, something went wrong."
     except Exception as e:
-        print(f"[ERROR] OpenRouter API error: {e}")
+        print(f"Unexpected error occurred: {e}")
         reply = "Sorry, something went wrong."
 
     return jsonify({"reply": reply})
