@@ -22,12 +22,12 @@ def get_ai_response():
 
     conversation_memory[player_id].append({"role": "user", "content": user_msg})
 
-    memory_slice = [conversation_memory[player_id][0]] + conversation_memory[player_id][-49:]
+    memory_slice = [conversation_memory[player_id][0]] + conversation_memory[player_id][-19:]
 
     payload = {
     "model": "minimax/minimax-m1",
     "messages": memory_slice,
-    "max_tokens": 4096
+    "max_tokens": 200,
 }
 
     headers = {
