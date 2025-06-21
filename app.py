@@ -22,8 +22,11 @@ def get_ai_response():
 
     conversation_memory[player_id].append({"role": "user", "content": user_msg})
 
-    # Limit memory slice size to avoid hitting API limits
-    memory_slice = [conversation_memory[player_id][0]] + conversation_memory[player_id][-19:]
+    # Keep last 1 system + 10 user+assistant messages (max 21 total entries)
+    history = conversation_memory[player_id][1:]
+    # Filter only last 10 user/assistant messages pairs (20 messages), or fewer if less exist
+    last_20 = history[-20:]
+    memory_slice = [conversation_memory[player_id][0]] + last_20
 
     payload = {
         "model": "minimax/minimax-m1",
@@ -39,10 +42,12 @@ def get_ai_response():
     try:
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
         response.raise_for_status()
-        reply = response.json()["choices"][0]["message"]["content"].strip()
+        result = response.json()
+        reply = result["choices"][0]["message"]["content"].strip()
         conversation_memory[player_id].append({"role": "assistant", "content": reply})
+        print(f"[INFO] Replied to {player_id} with: {reply}")
     except Exception as e:
-        print("OpenRouter error:", e)
+        print(f"[ERROR] OpenRouter API error: {e}")
         reply = "Sorry, something went wrong."
 
     return jsonify({"reply": reply})
